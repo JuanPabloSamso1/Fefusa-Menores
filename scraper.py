@@ -39,6 +39,8 @@ TEAM_ALIASES = {
     "san martin": "San Martin",
 }
 
+ZONE_LABELS = ["Zona A", "Zona B", "Zona C", "Zona D", "Zona E", "Zona F"]
+
 
 def normalize_team_name(name):
     if not name:
@@ -86,8 +88,23 @@ def _parse_table(table):
     return rows
 
 
+def _get_table_heading(table):
+    el = table
+    for _ in range(30):
+        prev = el.find_previous_sibling()
+        if prev:
+            el = prev
+        else:
+            el = el.parent
+        if not el:
+            break
+        if el.name in ["h1", "h2", "h3", "h4", "h5", "h6"]:
+            return el.get_text(strip=True)
+    return None
+
+
 def scrape_standings(url):
-    """Scrape all zone tables from a Scorefy standings page."""
+    """Returns list of zones: [{"name": str, "teams": [dict, ...]}]"""
     try:
         response = requests.get(url, headers={"User-Agent": USER_AGENT}, timeout=30)
         response.raise_for_status()
@@ -98,19 +115,23 @@ def scrape_standings(url):
             logger.warning(f"No tables found in {url}")
             return []
 
-        # Collect all teams from all zone tables.
-        # Pages with multiple zones may also have an incomplete "general" table.
-        # Dedup by normalized name keeping the entry with highest PJ (most played = real zone data).
-        best: dict[str, dict] = {}
+        zones = []
+        auto_idx = 0
         for table in tables:
-            for row in _parse_table(table):
-                key = row["normalized"]
-                if key not in best or row["PJ"] > best[key]["PJ"]:
-                    best[key] = row
+            teams = _parse_table(table)
+            if len(teams) < 4:
+                continue
+            heading = _get_table_heading(table)
+            if heading:
+                zone_name = heading
+            else:
+                zone_name = ZONE_LABELS[auto_idx] if auto_idx < len(ZONE_LABELS) else f"Zona {auto_idx + 1}"
+                auto_idx += 1
+            zones.append({"name": zone_name, "teams": teams})
 
-        standings = sorted(best.values(), key=lambda r: r["position"])
-        logger.info(f"Scraped {len(standings)} teams from {url}")
-        return standings
+        total = sum(len(z["teams"]) for z in zones)
+        logger.info(f"Scraped {total} teams in {len(zones)} zones from {url}")
+        return zones
 
     except requests.RequestException as e:
         logger.error(f"Request failed for {url}: {e}")
@@ -128,9 +149,9 @@ def scrape_all():
     for category in ["C20", "C17", "C15"]:
         for division in ["ORO", "PLATA", "BRONCE"]:
             url = URLS[category][division]
-            standings = scrape_standings(url)
-            if standings:
-                all_data[category][division] = standings
+            zones = scrape_standings(url)
+            if zones:
+                all_data[category][division] = zones
             else:
                 all_data[category][division] = []
                 errors.append(f"{category}-{division}")
@@ -140,13 +161,13 @@ def scrape_all():
 
 if __name__ == "__main__":
     all_data, errors = scrape_all()
-    print(f"Scraped data for categories: {list(all_data.keys())}")
     for category in ["C20", "C17", "C15"]:
         for division in ["ORO", "PLATA", "BRONCE"]:
-            count = len(all_data[category].get(division, []))
-            print(f"  {category} {division}: {count} teams")
-            if count > 0:
-                first = all_data[category][division][0]
-                print(f"    sample: {first.get('Equipo', 'N/A')} pts={first.get('Pts', 'N/A')}")
+            zones = all_data[category].get(division, [])
+            total = sum(len(z["teams"]) for z in zones)
+            print(f"  {category} {division}: {len(zones)} zonas, {total} equipos")
+            for z in zones:
+                sample = z["teams"][0] if z["teams"] else {}
+                print(f"    {z['name']}: {len(z['teams'])} equipos | lider: {sample.get('Equipo','?')} pts={sample.get('Pts','?')}")
     if errors:
         print(f"Errors: {errors}")

@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -18,6 +19,7 @@
         }
     </script>
 </head>
+
 <body class="bg-gray-100 min-h-screen">
     <header class="bg-yellow-500 text-white py-4 px-4 shadow-md">
         <div class="max-w-4xl mx-auto">
@@ -37,13 +39,16 @@
 
     <nav class="max-w-4xl mx-auto mt-4 px-4">
         <div class="flex space-x-2">
-            <button id="btn-ORO" onclick="showTab('ORO')" class="tab-btn flex-1 py-2 px-4 rounded bg-yellow-500 text-white font-medium">
+            <button id="btn-ORO" onclick="showTab('ORO')"
+                class="tab-btn flex-1 py-2 px-4 rounded bg-yellow-500 text-white font-medium">
                 Oro
             </button>
-            <button id="btn-PLATA" onclick="showTab('PLATA')" class="tab-btn flex-1 py-2 px-4 rounded bg-gray-200 text-gray-700 font-medium">
+            <button id="btn-PLATA" onclick="showTab('PLATA')"
+                class="tab-btn flex-1 py-2 px-4 rounded bg-gray-200 text-gray-700 font-medium">
                 Plata
             </button>
-            <button id="btn-BRONCE" onclick="showTab('BRONCE')" class="tab-btn flex-1 py-2 px-4 rounded bg-gray-200 text-gray-700 font-medium">
+            <button id="btn-BRONCE" onclick="showTab('BRONCE')"
+                class="tab-btn flex-1 py-2 px-4 rounded bg-gray-200 text-gray-700 font-medium">
                 Bronce
             </button>
         </div>
@@ -56,6 +61,13 @@
                 <div class="px-4 py-3 bg-gray-50 border-b">
                     <h2 class="text-lg font-semibold">Tabla Combinada - {{ division }}</h2>
                 </div>
+                {% if combined[division] %}
+                {% for zone_combined in combined[division] %}
+                {% if combined[division]|length > 1 %}
+                <div class="px-4 py-2 bg-yellow-50 border-b border-yellow-100 text-sm font-semibold text-yellow-800">
+                    {{ zone_combined.zone }}
+                </div>
+                {% endif %}
                 <div class="overflow-x-auto">
                     <table class="w-full text-sm">
                         <thead class="bg-gray-100">
@@ -65,12 +77,14 @@
                                 <th class="px-2 py-2 text-right">C15</th>
                                 <th class="px-2 py-2 text-right">C17</th>
                                 <th class="px-2 py-2 text-right">C20</th>
-                                <th class="px-2 py-2 text-right font-bold">Total</th>
+                                <th class="px-2 py-2 text-right font-bold">Pts</th>
+                                <th class="px-2 py-2 text-right text-gray-500">PJ</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {% for row in combined[division] %}
-                            <tr class="border-t {% if row.status == 'ascenso' %}bg-green-100{% elif row.status == 'descenso' %}bg-red-100{% endif %}">
+                            {% for row in zone_combined.rows %}
+                            <tr
+                                class="border-t {% if row.status == 'ascenso' %}bg-green-100{% elif row.status == 'descenso' %}bg-red-100{% endif %}">
                                 <td class="px-2 py-2">{{ row.rank }}</td>
                                 <td class="px-2 py-2 font-medium">
                                     {{ row.name }}
@@ -80,38 +94,28 @@
                                     <span class="ml-1 text-xs text-red-600">(↓)</span>
                                     {% endif %}
                                 </td>
-                                <td class="px-2 py-2 text-right">{{ row.pts_c15 }}</td>
-                                <td class="px-2 py-2 text-right">{{ row.pts_c17 }}</td>
-                                <td class="px-2 py-2 text-right">{{ row.pts_c20 }}</td>
+                                <td class="px-2 py-2 text-right text-xs">
+                                    {{ row.pts_c15 }}<span class="text-gray-400">/{{ row.pj_c15 }}pj</span>
+                                </td>
+                                <td class="px-2 py-2 text-right text-xs">
+                                    {{ row.pts_c17 }}<span class="text-gray-400">/{{ row.pj_c17 }}pj</span>
+                                </td>
+                                <td class="px-2 py-2 text-right text-xs">
+                                    {{ row.pts_c20 }}<span class="text-gray-400">/{{ row.pj_c20 }}pj</span>
+                                </td>
                                 <td class="px-2 py-2 text-right font-bold">{{ row.total_pts }}</td>
+                                <td class="px-2 py-2 text-right text-gray-500">{{ row.total_pj }}</td>
                             </tr>
                             {% endfor %}
-                            {% if not combined[division] %}
-                            <tr>
-                                <td colspan="6" class="px-4 py-8 text-center text-gray-500">No hay datos disponibles</td>
-                            </tr>
-                            {% endif %}
                         </tbody>
                     </table>
                 </div>
+                {% endfor %}
+                {% else %}
+                <p class="px-4 py-8 text-center text-gray-500">No hay datos disponibles</p>
+                {% endif %}
             </div>
 
-            <div class="mt-4 bg-white rounded-lg shadow overflow-hidden">
-                <div class="px-4 py-3 bg-gray-50 border-b">
-                    <h2 class="text-lg font-semibold">Top 5 - {{ division }}</h2>
-                </div>
-                <div class="p-4">
-                    {% for row in combined[division][:5] %}
-                    <div class="flex items-center mb-2">
-                        <span class="w-6 text-lg font-bold text-gray-500">{{ row.rank }}</span>
-                        <div class="flex-1 bg-gray-200 rounded-full h-4 overflow-hidden">
-                            <div class="h-full bg-yellow-500" style="width: {% if combined[division][0].total_pts > 0 %}{{ (row.total_pts / combined[division][0].total_pts * 100)|int }}{% else %}0{% endif %}%"></div>
-                        </div>
-                        <span class="ml-2 font-medium w-12 text-right">{{ row.total_pts }}</span>
-                    </div>
-                    {% endfor %}
-                </div>
-            </div>
 
             <div class="mt-4 grid gap-4">
                 {% for category in ['C15', 'C17', 'C20'] %}
@@ -119,6 +123,15 @@
                     <div class="px-4 py-3 bg-gray-50 border-b">
                         <h2 class="text-lg font-semibold">{{ category }} - {{ division }}</h2>
                     </div>
+                    {% set zones = all_data[category][division] %}
+                    {% if zones %}
+                    {% for zone in zones %}
+                    {% if zones|length > 1 %}
+                    <div
+                        class="px-4 py-2 bg-yellow-50 border-b border-yellow-100 text-sm font-semibold text-yellow-800">
+                        {{ zone.name }}
+                    </div>
+                    {% endif %}
                     <div class="overflow-x-auto">
                         <table class="w-full text-sm">
                             <thead class="bg-gray-100">
@@ -136,11 +149,11 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for team in all_data[category][division][:10] %}
+                                {% for team in zone.teams %}
                                 <tr class="border-t">
-                                    <td class="px-2 py-2">{{ loop.index }}</td>
+                                    <td class="px-2 py-2">{{ team.position }}</td>
                                     <td class="px-2 py-2">{{ team.Equipo }}</td>
-                                    <td class="px-2 py-2 text-right">{{ team.Pts }}</td>
+                                    <td class="px-2 py-2 text-right font-medium">{{ team.Pts }}</td>
                                     <td class="px-2 py-2 text-right">{{ team.PJ }}</td>
                                     <td class="px-2 py-2 text-right">{{ team.PG }}</td>
                                     <td class="px-2 py-2 text-right">{{ team.PE }}</td>
@@ -153,6 +166,10 @@
                             </tbody>
                         </table>
                     </div>
+                    {% endfor %}
+                    {% else %}
+                    <p class="px-4 py-6 text-center text-gray-500 text-sm">Sin datos</p>
+                    {% endif %}
                 </div>
                 {% endfor %}
             </div>
@@ -167,4 +184,5 @@
         </div>
     </footer>
 </body>
+
 </html>
